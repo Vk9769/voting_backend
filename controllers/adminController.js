@@ -1,4 +1,5 @@
-import { pool } from '../db.js';
+import pool from '../db.js';
+
 
 export const getDashboard = async (req, res) => {
   const stats = await pool.query(`
