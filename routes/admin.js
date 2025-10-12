@@ -4,6 +4,9 @@ import { requireRole } from '../middleware/roleCheck.js';
 import {
   getDashboard,
   getBooths,
+  createBooth,
+  editBooth,
+  deleteBooth,
   getAgents,
   getReports,
   flagActivity,
@@ -17,8 +20,13 @@ const router = express.Router();
 // Dashboard
 router.get('/dashboard', verifyToken, requireRole(['admin']), getDashboard);
 
-// Fetch lists
+// Booth management
 router.get('/booths', verifyToken, requireRole(['admin']), getBooths);
+router.post('/booths', verifyToken, requireRole(['admin']), createBooth);
+router.put('/booths/:booth_id', verifyToken, requireRole(['admin']), editBooth);
+router.delete('/booths/:booth_id', verifyToken, requireRole(['admin']), deleteBooth);
+
+// Agents & Reports
 router.get('/agents', verifyToken, requireRole(['admin']), getAgents);
 router.get('/reports', verifyToken, requireRole(['admin']), getReports);
 
