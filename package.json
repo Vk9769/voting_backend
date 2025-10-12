@@ -15,7 +15,8 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
