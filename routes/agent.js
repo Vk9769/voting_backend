@@ -1,12 +1,14 @@
 import express from 'express';
+import multer from 'multer';
 import { addAgent, getAssignedBooth, postLocation, markVote, getTasks } from '../controllers/agentController.js';
 import { verifyToken } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roleCheck.js';
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() }); // keep file in memory
 
-// Add new agent (admin only)
-router.post('/', verifyToken, requireRole(['admin']), addAgent);
+// Add new agent (admin only) with multipart support
+router.post('/', verifyToken, requireRole(['admin']), upload.single('profilePhoto'), addAgent);
 
 // Existing agent routes
 router.get('/assigned-booth', verifyToken, requireRole(['agent']), getAssignedBooth);

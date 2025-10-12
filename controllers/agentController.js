@@ -1,67 +1,57 @@
 import pool from '../db.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 
 // Add a new agent
 export const addAgent = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      phone,
-      boothId,
-      agentUuid,
-      profilePhoto
-    } = req.body;
+    const { firstName, lastName, email, password, phone, boothId, agentUuid } = req.body;
 
     if (!firstName || !lastName || !email || !password || !boothId || !agentUuid) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check if email exists
+    // Check email & UUID
     const emailCheck = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
-    if (emailCheck.rows.length > 0) {
-      return res.status(400).json({ error: 'Email already exists' });
-    }
+    if (emailCheck.rows.length > 0) return res.status(400).json({ error: 'Email already exists' });
 
-    // Check if agent UUID exists
     const uuidCheck = await pool.query('SELECT id FROM users WHERE agent_uuid=$1', [agentUuid]);
-    if (uuidCheck.rows.length > 0) {
-      return res.status(400).json({ error: 'Agent UUID already exists' });
-    }
+    if (uuidCheck.rows.length > 0) return res.status(400).json({ error: 'Agent UUID already exists' });
 
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert into users table
+    // Handle uploaded profile photo
+    let profilePhotoPath = null;
+    if (req.file) {
+      // Save file to uploads/ folder
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+      const filename = `${uuidv4()}-${req.file.originalname}`;
+      const filepath = path.join(uploadDir, filename);
+
+      fs.writeFileSync(filepath, req.file.buffer);
+      profilePhotoPath = `/uploads/${filename}`; // Save relative path in DB
+    }
+
+    // Insert user
     const userId = uuidv4();
     await pool.query(
       `INSERT INTO users
         (id, first_name, last_name, email, phone, password_hash, agent_uuid, profile_photo, assigned_booth)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [userId, firstName, lastName, email, phone || null, passwordHash, agentUuid, profilePhoto || null, boothId]
+      [userId, firstName, lastName, email, phone || null, passwordHash, agentUuid, profilePhotoPath, boothId]
     );
-
-    // Get agent role id
-    const roleRes = await pool.query('SELECT id FROM roles WHERE name=$1', ['agent']);
-    if (roleRes.rows.length === 0) {
-      return res.status(500).json({ error: 'Agent role not found' });
-    }
-    const roleId = roleRes.rows[0].id;
 
     // Assign role
-    await pool.query(
-      'INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)',
-      [userId, roleId]
-    );
+    const roleRes = await pool.query('SELECT id FROM roles WHERE name=$1', ['agent']);
+    if (roleRes.rows.length === 0) return res.status(500).json({ error: 'Agent role not found' });
+    await pool.query('INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)', [userId, roleRes.rows[0].id]);
 
-    // Optional: also insert into agent_booths table
-    await pool.query(
-      'INSERT INTO agent_booths (agent_id, booth_id) VALUES ($1,$2)',
-      [userId, boothId]
-    );
+    // Optional: insert into agent_booths
+    await pool.query('INSERT INTO agent_booths (agent_id, booth_id) VALUES ($1,$2)', [userId, boothId]);
 
     res.json({ success: true, message: 'Agent added successfully', agentId: userId });
   } catch (err) {
