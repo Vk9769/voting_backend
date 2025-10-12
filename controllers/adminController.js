@@ -1,14 +1,28 @@
 import pool from '../db.js';
 
-
+// Enhanced Dashboard stats
 export const getDashboard = async (req, res) => {
-  const stats = await pool.query(`
-    SELECT 
-      (SELECT COUNT(*) FROM users) as total_users,
-      (SELECT COUNT(*) FROM votes) as total_votes,
-      (SELECT COUNT(*) FROM agents) as total_agents
-  `);
-  res.json(stats.rows[0]);
+  try {
+    const statsQuery = await pool.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM booths) AS polls,
+        (SELECT COUNT(*) FROM agents) AS agents,
+        (SELECT COUNT(*) 
+         FROM users u
+         JOIN user_roles ur ON ur.user_id = u.id
+         JOIN roles r ON r.id = ur.role_id
+         WHERE r.name = 'voter') AS voters,
+        (SELECT COUNT(*) FROM audit_logs) AS reports
+    `);
+
+    res.json({
+      success: true,
+      data: statsQuery.rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
 // Get all booths
@@ -36,7 +50,7 @@ export const getAgents = async (req, res) => {
 // Get all reports
 export const getReports = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM reports');
+    const result = await pool.query('SELECT * FROM audit_logs');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
