@@ -1,12 +1,16 @@
 import pool from '../db.js';
 
-// Enhanced Dashboard stats
+// Enhanced Dashboard stats (fixed agent count)
 export const getDashboard = async (req, res) => {
   try {
     const statsQuery = await pool.query(`
       SELECT 
         (SELECT COUNT(*) FROM booths) AS polls,
-        (SELECT COUNT(*) FROM agents) AS agents,
+        (SELECT COUNT(*) 
+         FROM users u
+         JOIN user_roles ur ON ur.user_id = u.id
+         JOIN roles r ON r.id = ur.role_id
+         WHERE r.name = 'agent') AS agents,
         (SELECT COUNT(*) 
          FROM users u
          JOIN user_roles ur ON ur.user_id = u.id
@@ -20,7 +24,7 @@ export const getDashboard = async (req, res) => {
       data: statsQuery.rows[0],
     });
   } catch (err) {
-    console.error(err);
+    console.error('Dashboard error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
