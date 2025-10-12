@@ -42,13 +42,23 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
-    // Create JWT token
-   const token = jwt.sign(
-  { id: user.id, email: user.email, role: user.role },
-  process.env.JWT_SECRET,
-  { expiresIn: '8h' }
-);
+    // 🔹 Fetch user's role from roles table
+    const roleResult = await pool.query(
+      `SELECT r.name 
+   FROM user_roles ur 
+   JOIN roles r ON ur.role_id = r.id 
+   WHERE ur.user_id = $1 LIMIT 1`,
+      [user.id]
+    );
 
+    const role = roleResult.rows[0]?.name || 'user'; // default fallback
+
+    // Create JWT token with role included
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
 
     res.json({
       message: 'Login successful',
@@ -60,8 +70,10 @@ export const login = async (req, res) => {
         email: user.email,
         phone: user.phone,
         status: user.status,
+        role, // include for front-end too
       },
     });
+
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Server error during login' });
