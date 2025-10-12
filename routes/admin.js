@@ -1,6 +1,7 @@
 import express from 'express';
 import { verifyToken } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roleCheck.js';
+import { getDashboard, getBooths, getAgents, getReports, flagActivity } from '../controllers/adminController.js';
 
 
 const router = express.Router();
