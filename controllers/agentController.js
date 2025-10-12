@@ -1,4 +1,4 @@
-import { pool } from '../db.js';
+import pool from '../db.js';
 import crypto from 'crypto';        
 
 export const postLocation = async (req, res) => {
