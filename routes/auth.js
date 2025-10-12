@@ -1,19 +1,12 @@
-import express from "express";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-dotenv.config();
-
+import express from 'express';
+import { login, refreshToken, registerDevice, getRoles, selectRole } from '../controllers/authController.js';
+import { verifyToken } from '../middleware/auth.js';
 const router = express.Router();
 
-const demoUser = { id: 1, username: "admin", password: "admin123" };
-
-router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-  if (username !== demoUser.username || password !== demoUser.password)
-    return res.status(401).json({ error: "Invalid credentials" });
-
-  const token = jwt.sign({ id: demoUser.id, username }, process.env.JWT_SECRET, { expiresIn: "8h" });
-  res.json({ token });
-});
+router.post('/login', login);
+router.post('/refresh', refreshToken);
+router.post('/register-device', registerDevice);
+router.get('/roles', verifyToken, getRoles);
+router.post('/select-role', verifyToken, selectRole);
 
 export default router;
