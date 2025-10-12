@@ -26,21 +26,23 @@ export const getDashboard = async (req, res) => {
   }
 };
 
-// ==================== BOOTH MANAGEMENT ====================
+// ==================== BOOTH MANAGEMENT (FIXED FOR POSTGIS) ====================
 
 // Create a new booth
 export const createBooth = async (req, res) => {
   try {
-    const { name, location, description } = req.body;
+    const { name, lat, lng, radius_meters, description } = req.body;
 
-    if (!name || !location) {
-      return res.status(400).json({ success: false, message: 'Name and location are required' });
+    if (!name || !lat || !lng) {
+      return res.status(400).json({ success: false, message: 'Name, lat, and lng are required' });
     }
 
     const result = await pool.query(
-      `INSERT INTO booths (name, location, description, created_at)
-       VALUES ($1, $2, $3, NOW()) RETURNING *`,
-      [name, location, description || null]
+      `INSERT INTO booths (name, location, radius_meters, description, created_at)
+       VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4, $5, NOW())
+       RETURNING id, name, radius_meters, description,
+                 ST_AsText(location) AS location;`,
+      [name, lng, lat, radius_meters || 50, description || null]
     );
 
     res.json({ success: true, message: 'Booth created successfully', booth: result.rows[0] });
@@ -54,24 +56,28 @@ export const createBooth = async (req, res) => {
 export const editBooth = async (req, res) => {
   try {
     const { booth_id } = req.params;
-    const { name, location, description } = req.body;
+    const { name, lat, lng, radius_meters, description } = req.body;
 
     if (!booth_id) return res.status(400).json({ success: false, message: 'Booth ID required' });
 
     const result = await pool.query(
       `UPDATE booths 
-       SET name = COALESCE($1, name),
-           location = COALESCE($2, location),
-           description = COALESCE($3, description),
-           updated_at = NOW()
-       WHERE id = $4
-       RETURNING *`,
-      [name, location, description, booth_id]
+       SET 
+         name = COALESCE($1, name),
+         location = CASE WHEN $2 IS NOT NULL AND $3 IS NOT NULL
+                         THEN ST_SetSRID(ST_MakePoint($2, $3), 4326)
+                         ELSE location END,
+         radius_meters = COALESCE($4, radius_meters),
+         description = COALESCE($5, description),
+         updated_at = NOW()
+       WHERE id = $6
+       RETURNING id, name, radius_meters, description,
+                 ST_AsText(location) AS location;`,
+      [name, lng, lat, radius_meters, description, booth_id]
     );
 
-    if (result.rowCount === 0) {
+    if (result.rowCount === 0)
       return res.status(404).json({ success: false, message: 'Booth not found' });
-    }
 
     res.json({ success: true, message: 'Booth updated successfully', booth: result.rows[0] });
   } catch (err) {
@@ -84,14 +90,11 @@ export const editBooth = async (req, res) => {
 export const deleteBooth = async (req, res) => {
   try {
     const { booth_id } = req.params;
-
     if (!booth_id) return res.status(400).json({ success: false, message: 'Booth ID required' });
 
     const result = await pool.query('DELETE FROM booths WHERE id = $1', [booth_id]);
-
-    if (result.rowCount === 0) {
+    if (result.rowCount === 0)
       return res.status(404).json({ success: false, message: 'Booth not found' });
-    }
 
     res.json({ success: true, message: 'Booth deleted successfully' });
   } catch (err) {
@@ -103,13 +106,20 @@ export const deleteBooth = async (req, res) => {
 // Fetch all booths
 export const getBooths = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM booths ORDER BY name');
+    const result = await pool.query(`
+      SELECT id, name, radius_meters, description,
+             ST_Y(location) AS latitude,
+             ST_X(location) AS longitude
+      FROM booths
+      ORDER BY name
+    `);
     res.json({ success: true, booths: result.rows });
   } catch (err) {
     console.error('Error fetching booths:', err);
     res.status(500).json({ success: false, message: 'Server error fetching booths' });
   }
 };
+
 
 // ==================== FETCH OTHER DATA ====================
 
