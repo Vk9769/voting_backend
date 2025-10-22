@@ -1,0 +1,11 @@
+phases:
+  install:
+    commands:
+      - echo "Upgrading npm to latest compatible version"
+      - npm install -g npm@9
+      - npm install
+  build:
+    commands:
+      - echo "Running build"
+      - npm run build --if-present
+      - npm test
