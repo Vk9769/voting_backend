@@ -1,16 +1,26 @@
 import bcrypt from 'bcryptjs';
 
-const passwords = [
-  { user: 'admin', password: 'admin123' },
-  { user: 'agent1', password: 'agent123' },
-  { user: 'agent2', password: 'agent123' },
-  { user: 'voter1', password: 'voter123' },
-  { user: 'voter2', password: 'voter123' },
-  { user: 'voter3', password: 'voter123' },
+const users = [
+  'Alice',      // admin
+  'Bob',        // observer
+  'Charlie',    // candidate
+  'Diana',      // BLO
+  'Edward',     // super_agent
+  'Fiona',      // agent
+  'George',     // voter
+  'Hannah',     // voter
+  'Ian',        // candidate
+  'Julia'       // admin
 ];
 
-passwords.forEach(async (p) => {
-  const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(p.password, salt);
-  console.log(`${p.user}: ${hash}`);
-});
+const plainPassword = '123456';
+
+async function generateHashes() {
+  for (const user of users) {
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(plainPassword, salt);
+    console.log(`${user}: '${hash}'`);
+  }
+}
+
+generateHashes();

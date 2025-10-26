@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
-// Import routes
+// Routes
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
 import agentRoutes from "./routes/agent.js";
@@ -29,12 +29,11 @@ app.use("/api/voter", voterRoutes);
 // Default test route
 app.get("/", (req, res) => res.send("✅ Voting API running with Socket.IO and new routes"));
 
-// Socket.IO (for live agent tracking)
+// Socket.IO
 io.on("connection", (socket) => {
   console.log("🟢 socket connected:", socket.id);
 
   socket.on("agent_location_update", (payload) => {
-    // Broadcast location updates to all clients
     io.emit("agent_location_broadcast", payload);
   });
 
