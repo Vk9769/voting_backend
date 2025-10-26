@@ -102,14 +102,30 @@ export const editBooth = async (req, res) => {
 };
 
 // Fetch all booths
+// Fetch all booths in structured format for Flutter app
 export const getBooths = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, name, radius_meters, description, address, state, district, latitude, longitude, ac_name, part_name_no
+      SELECT 
+        state,
+        district,
+        ac_name,
+        part_name_no AS part_name,
+        COUNT(*) AS booths
       FROM booths
-      ORDER BY name
+      GROUP BY state, district, ac_name, part_name_no
+      ORDER BY state, district, ac_name, part_name_no
     `);
-    res.json({ success: true, booths: result.rows });
+
+    const boothsData = result.rows.map(row => ({
+      state: row.state,
+      district: row.district,
+      assembly_constituency: row.ac_name,
+      part_name: row.part_name,
+      booths: parseInt(row.booths, 10)
+    }));
+
+    res.json(boothsData);
   } catch (err) {
     console.error('Error fetching booths:', err);
     res.status(500).json({ success: false, message: 'Server error fetching booths' });
