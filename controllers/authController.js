@@ -50,22 +50,26 @@ export const login = async (req, res) => {
     }
 
     // Fetch user's role (first role if multiple)
-    const roleResult = await pool.query(
-      `SELECT r.name 
-       FROM user_roles ur 
-       JOIN roles r ON ur.role_id = r.id 
-       WHERE ur.user_id = $1 LIMIT 1`,
-      [user.id]
-    );
+   const roleResult = await pool.query(
+  `SELECT r.name, r.hierarchy
+   FROM user_roles ur
+   JOIN roles r ON ur.role_id = r.id
+   WHERE ur.user_id = $1
+   ORDER BY r.hierarchy ASC`,
+  [user.id]
+);
 
-    const role = roleResult.rows[0]?.name || 'user';
+const roles = roleResult.rows.map(r => r.name);
+
+// Default active role = highest authority = smallest hierarchy
+const activeRole = roleResult.rows.length > 0 ? roleResult.rows[0].name : null;
 
     // Create JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role },
-      process.env.JWT_SECRET,
-      { expiresIn: '8h' }
-    );
+  { id: user.id, email: user.email, role: activeRole, roles },
+  process.env.JWT_SECRET,
+  { expiresIn: '8h' }
+);
 
     res.json({
       message: 'Login successful',
@@ -148,5 +152,19 @@ export const getRoles = async (req, res) => {
 export const selectRole = async (req, res) => {
   const { role } = req.body;
   if (!role) return res.status(400).json({ error: 'Missing role' });
-  res.json({ message: `Active role set to ${role}` });
+
+  // Ensure role belongs to user
+  const roles = req.user.roles;
+  if (!roles.includes(role)) {
+    return res.status(403).json({ error: 'Role not assigned to user' });
+  }
+
+  // Regenerate token with selected role
+  const newToken = jwt.sign(
+    { id: req.user.id, email: req.user.email, role, roles },
+    process.env.JWT_SECRET,
+    { expiresIn: '8h' }
+  );
+
+  res.json({ message: `Role switched to ${role}`, token: newToken });
 };
