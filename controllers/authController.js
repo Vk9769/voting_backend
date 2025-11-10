@@ -64,27 +64,29 @@ const roles = roleResult.rows.map(r => r.name);
 // Default active role = highest authority = smallest hierarchy
 const activeRole = roleResult.rows.length > 0 ? roleResult.rows[0].name : null;
 
-    // Create JWT token
-    const token = jwt.sign(
+  // Create JWT token
+const token = jwt.sign(
   { id: user.id, email: user.email, role: activeRole, roles },
   process.env.JWT_SECRET,
   { expiresIn: '8h' }
 );
 
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        voter_id: user.voter_id,
-        status: user.status,
-        role,
-      },
-    });
+res.json({
+  message: 'Login successful',
+  token,
+  user: {
+    id: user.id,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    email: user.email,
+    phone: user.phone,
+    voter_id: user.voter_id,
+    status: user.status,
+    roles,
+    activeRole,
+  },
+});
+
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Server error during login' });

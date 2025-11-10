@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 
 const users = [
+  'Maya',
+  'Vikaram',
   'Alice',      // admin
   'Bob',        // observer
   'Charlie',    // candidate
