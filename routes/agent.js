@@ -25,4 +25,7 @@ router.post('/location', verifyToken, requireRole(['agent']), postLocation);
 router.post('/mark-vote', verifyToken, requireRole(['agent']), markVote);
 router.get('/tasks', verifyToken, requireRole(['agent']), getTasks);
 
+//get agent profile info 
+router.get('/profile', verifyToken, requireRole(['agent', 'super_agent']), getAgentProfile);
+
 export default router;
