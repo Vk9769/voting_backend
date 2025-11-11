@@ -13,10 +13,11 @@ const upload = multer({ storage: multer.memoryStorage() }); // keep file in memo
 router.post(
   '/',
   verifyToken,
-  checkRoleCreatePermission,   // ✅ Add here
-  upload.single('profilePhoto'),
+  upload.single('profilePhoto'), // ✅ first parse multipart form
+  checkRoleCreatePermission,     // ✅ now req.body.role exists
   addAgent
 );
+
 
 // Existing agent routes
 router.get('/assigned-booth', verifyToken, requireRole(['agent']), getAssignedBooth);
