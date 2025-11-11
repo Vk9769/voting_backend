@@ -1,24 +1,49 @@
+// controllers/agentController.js
 import pool from '../db.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 
-// Add a new agent
+
 export const addAgent = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone, boothId, agentUuid } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      voterId,
+      idType,
+      idNumber,
+      role,
+      gender,
+      dob,
+      address,
+      boothId
+    } = req.body;
 
-    if (!firstName || !lastName || !email || !password || !boothId || !agentUuid) {
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password || !boothId || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check email & UUID
+    // Check duplicates
     const emailCheck = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     if (emailCheck.rows.length > 0) return res.status(400).json({ error: 'Email already exists' });
 
-    const uuidCheck = await pool.query('SELECT id FROM users WHERE agent_uuid=$1', [agentUuid]);
-    if (uuidCheck.rows.length > 0) return res.status(400).json({ error: 'Agent UUID already exists' });
+    const phoneCheck = await pool.query('SELECT id FROM users WHERE phone=$1', [phone]);
+    if (phoneCheck.rows.length > 0) return res.status(400).json({ error: 'Phone already exists' });
+
+    // Check GOV ID
+    if (idType && idNumber) {
+      const govCheck = await pool.query(
+        `SELECT id FROM users WHERE gov_id_type = $1 AND gov_id_number = $2`,
+        [idType, idNumber]
+      );
+      if (govCheck.rows.length > 0) return res.status(400).json({ error: 'Government ID already exists' });
+    }
 
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
@@ -26,37 +51,53 @@ export const addAgent = async (req, res) => {
     // Handle uploaded profile photo
     let profilePhotoPath = null;
     if (req.file) {
-      // Save file to uploads/ folder
+
       const uploadDir = path.join(process.cwd(), 'uploads');
       if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+
       const filename = `${uuidv4()}-${req.file.originalname}`;
       const filepath = path.join(uploadDir, filename);
 
       fs.writeFileSync(filepath, req.file.buffer);
-      profilePhotoPath = `/uploads/${filename}`; // Save relative path in DB
+      profilePhotoPath = `/uploads/${filename}`;
     }
 
-    // Insert user
+
     const userId = uuidv4();
+
+    // Insert new user
     await pool.query(
       `INSERT INTO users
-        (id, first_name, last_name, email, phone, password_hash, agent_uuid, profile_photo, assigned_booth)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [userId, firstName, lastName, email, phone || null, passwordHash, agentUuid, profilePhotoPath, boothId]
+      (id, first_name, last_name, email, phone, password_hash, profile_photo, voter_id,
+       gov_id_type, gov_id_number, gender, date_of_birth, address, booth_id, assigned_booth)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14)`,
+      [
+        userId, firstName, lastName, email, phone || null, passwordHash,
+        profilePhotoPath, voterId || null, idType || null, idNumber || null,
+        gender || null, dob || null, address || null, boothId
+      ]
     );
 
-    // Assign role
-    const roleRes = await pool.query('SELECT id FROM roles WHERE name=$1', ['agent']);
-    if (roleRes.rows.length === 0) return res.status(500).json({ error: 'Agent role not found' });
-    await pool.query('INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)', [userId, roleRes.rows[0].id]);
+    // Assign Role
+    const selectedRole = role.toLowerCase();
+    const roleRes = await pool.query('SELECT id FROM roles WHERE name=$1', [selectedRole]);
+    if (roleRes.rows.length === 0) return res.status(400).json({ error: `Role "${selectedRole}" not found` });
 
-    // Optional: insert into agent_booths
-    await pool.query('INSERT INTO agent_booths (agent_id, booth_id) VALUES ($1,$2)', [userId, boothId]);
+    await pool.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)`, [
+      userId,
+      roleRes.rows[0].id
+    ]);
 
-    res.json({ success: true, message: 'Agent added successfully', agentId: userId });
+    // Insert into agent_booths table
+    await pool.query(`INSERT INTO agent_booths (agent_id, booth_id) VALUES ($1,$2)`, [
+      userId,
+      boothId
+    ]);
+
+    res.json({ success: true, message: `${role} created successfully`, userId });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error while creating user' });
   }
 };
 
