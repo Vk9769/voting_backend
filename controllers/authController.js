@@ -64,9 +64,14 @@ const roles = roleResult.rows.map(r => r.name);
 // Default active role = highest authority = smallest hierarchy
 const activeRole = roleResult.rows.length > 0 ? roleResult.rows[0].name : null;
 
-  // Create JWT token
+  // Create JWT token with roles included
 const token = jwt.sign(
-  { id: user.id, email: user.email, role: activeRole, roles },
+  {
+    id: user.id,
+    email: user.email,
+    role: activeRole,   // highest authority role
+    roles               // list of roles (if user switches role later)
+  },
   process.env.JWT_SECRET,
   { expiresIn: '8h' }
 );
