@@ -14,6 +14,7 @@ import {
   assignVoterToBooth,
   getBoothAssignments,
 } from '../controllers/adminController.js';
+import { getBoothsFull } from '../controllers/adminController.js';
 
 const router = express.Router();
 
