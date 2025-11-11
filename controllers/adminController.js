@@ -132,6 +132,32 @@ export const getBooths = async (req, res) => {
   }
 };
 
+export const getBoothsFull = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id,
+        name,
+        state,
+        district,
+        ac_name AS assembly_constituency,
+        part_name_no AS part_name,
+        radius_meters,
+        latitude,
+        longitude,
+        address
+      FROM booths
+      ORDER BY state, district, ac_name, part_name_no;
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching full booth list:', err);
+    res.status(500).json({ error: 'Server error fetching booth list' });
+  }
+};
+
+
 // Delete a booth
 export const deleteBooth = async (req, res) => {
   try {

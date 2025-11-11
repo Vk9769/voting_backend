@@ -25,6 +25,7 @@ router.get('/booths', verifyToken, requireRole(['admin']), getBooths);
 router.post('/booths', verifyToken, requireRole(['admin']), createBooth);
 router.put('/booths/:booth_id', verifyToken, requireRole(['admin']), editBooth);
 router.delete('/booths/:booth_id', verifyToken, requireRole(['admin']), deleteBooth);
+router.get('/booths/full', verifyToken, requireRole(['admin', 'super_admin', 'master_admin']), getBoothsFull);
 
 // Agents & Reports
 router.get('/agents', verifyToken, requireRole(['admin']), getAgents);
