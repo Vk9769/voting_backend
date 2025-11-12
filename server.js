@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import path from 'path';
 
 // Routes
 import authRoutes from "./routes/auth.js";
@@ -15,6 +16,9 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
+
+// ✅ serve uploads folder
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Middleware
 app.use(cors());
